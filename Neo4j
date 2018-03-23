@@ -1,0 +1,57 @@
+// Create contacts from a csv file 
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM "file:///WE_00DG0000000hrgYMAQ_1/Contact.csv" As row 
+Create(:Contact {ID:row.Id,FirstName:row.FirstName, MiddleName:row.MiddleName, LastName:row.LastName})
+
+// Create index to ensure quick lookup when creating relationships
+CREATE INDEX ON :Contact(ID)
+CREATE CONSTRAINT ON (c:Contact) ASSERT c.Id IS UNIQUE 
+
+// Create nodes and relationships from relationship csv 
+USING PERIODIC COMMIT 
+LOAD CSV WITH HEADERS FROM "file:///WE_00DG0000000hrgYMAQ_1/npe4__Relationship__c.csv" As row 
+Match (f:Contact {ID:row.npe4__RelatedContact__c}), (t:Contact {ID:row.npe4__Contact__c}) 
+Create (f)-[:Related_To{role:row.npe4__Type__c}] ->(t)
+
+//Create relationships for contact solicitors 
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM "file:///WE_00DG0000000hrgYMAQ_1/Contact.csv" As row 
+MATCH (c: Contact {ID: row.Id}), (s: Contact {ID: row.Solicitor__c}) 
+CREATE (s)-[:Solicitor]->(c)
+
+error: this query builds a cartesian product between disconnected patterns.
+
+
+// Create Accounts from a csv file 
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM "file:///WE_00DG0000000hrgYMAQ_1/Account.csv" As row 
+Create(:Account {ID:row.Id,Name:row.Name})
+
+// Index AccountID
+CREATE INDEX ON :Account(ID);
+
+
+
+// Connect Contacts to their Accounts
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM "file:///WE_00DG0000000hrgYMAQ_1/Contact.csv" As row 
+MATCH (f: Contact {ID: row.Id}), (d: Account {ID: row.AccountId}) 
+CREATE (f)-[:On_Account]->(d)
+
+
+
+// Connect Accounts to their Solicitors
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM "file:///WE_00DG0000000hrgYMAQ_1/Account.csv" As row 
+MATCH (a: Account {ID: row.Id}), (s: Contact {ID: row.Solicitor__c}) 
+CREATE (s)-[:Solicitor]->(a)
+
+// Connect Contacts to Affiliated Organizations (Accounts)
+USING PERIODIC COMMIT 
+LOAD CSV WITH HEADERS FROM "file:///WE_00DG0000000hrgYMAQ_1/npe5__Affiliation__c.csv" As row 
+Match (contact:Contact {ID:row.npe5__Contact__c}), (org:Account {ID:row.npe5__Organization__c}) 
+Create (contact)-[:Affilated{role:row.npe5__Role__c, description:row.npe5__Description__c, status:row.npe5__Status__c}] ->(org)
+
+
+
+
